@@ -117,13 +117,13 @@ memory:
   #
   # 【方案 1：YAML 直接改】
   #   memory.engine: external   # 或 both
-  #   memory.external.provider: mem0   # 选一个：openjiuwen | mem0 | openviking
-  #   # 然后在下方对应的 mem0/openjiuwen/openviking 子段填 api_key 或 endpoint
+  #   memory.external.provider: memtier   # 选一个：openjiuwen | mem0 | openviking | lakebase | memtier
+  #   # 然后在下方对应的 provider 子段填写配置
   #
   # 【方案 2：环境变量覆盖】
   #   export MEMORY_ENGINE=external
-  #   export MEMORY_EXTERNAL_PROVIDER=mem0
-  #   export MEM0_API_KEY=sk-xxx
+  #   export MEMORY_EXTERNAL_PROVIDER=memtier
+  #   export MEMTIER_WORKSPACE=~/.jiuwenswarm/workspace
   #
   # 【关闭外接记忆】
   #   把 memory.engine 改回 builtin 或 none；
@@ -137,6 +137,7 @@ memory:
   #   │ external    │ openjiuwen    │ 只挂外接 LTM                         │
   #   │ external    │ mem0          │ 只挂外接 Mem0                        │
   #   │ external    │ openviking    │ 只挂外接 OpenViking                  │
+  #   │ external    │ memtier       │ 只挂外接 MemTier 本地分层记忆         │
   #   │ external    │ <plugin-name> │ 只挂用户安装的插件                   │
   #   │ both        │ 任一          │ 内置 + 外接同时挂（LLM 两套工具并列）│
   #   │ none        │ *             │ 全关，任何记忆 rail 都不挂           │
@@ -149,7 +150,7 @@ memory:
   # - 失败降级：provider 构建失败或网络异常不阻塞主流程
   external:
     # 选哪家 provider。空字符串 = 禁用外接（等价于 engine=builtin）
-    provider: ${MEMORY_EXTERNAL_PROVIDER:-}   # '' | openjiuwen | mem0 | openviking | lakebase | <plugin-name>
+    provider: ${MEMORY_EXTERNAL_PROVIDER:-}   # '' | openjiuwen | mem0 | openviking | lakebase | memtier | <plugin-name>
     # 数据隔离标识（所有 provider 共用）
     user_id: ${MEMORY_USER_ID:-__default__}
     scope_id: ${MEMORY_SCOPE_ID:-__default__}
@@ -188,6 +189,15 @@ memory:
       base_url: ${LAKEBASE_API_URL:-}
       base_id: ${LAKEBASE_MEM_BASE_ID:-}
       database_id: ${LAKEBASE_DATABASE_ID:-}
+
+    # -- MemTier（本地分层记忆：episodic JSONL + semantic facts + optional vectors）--
+    # 生效条件：provider='memtier'
+    memtier:
+      workspace: ${MEMTIER_WORKSPACE:-}       # 默认使用 JiuwenSwarm workspace
+      project: ${MEMTIER_PROJECT:-default}
+      top_k: ${MEMTIER_TOP_K:-20}
+      token_budget: ${MEMTIER_TOKEN_BUDGET:-2400}
+      stage1_k1: ${MEMTIER_K1:-10}
 
 models:
   defaults:
@@ -687,7 +697,7 @@ permissions:
     coding_memory_write: allow
     coding_memory_edit: allow
     coding_memory_read: allow
-    # 外接记忆工具（External Memory — OpenJiuwen / Mem0 / OpenViking）
+    # 外接记忆工具（External Memory - OpenJiuwen / Mem0 / OpenViking / MemTier）
     ltm_search: allow
     ltm_search_summary: allow
     mem0_profile: allow
@@ -698,6 +708,9 @@ permissions:
     viking_browse: allow
     viking_remember: allow
     viking_add_resource: allow
+    memtier_search: allow
+    memtier_remember: allow
+    memtier_stats: allow
     mcp_free_search: allow
     mcp_paid_search: allow
     mcp_fetch_webpage: allow

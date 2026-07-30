@@ -41,7 +41,7 @@ Config location: `memory.external` section in `config.yaml`.
 memory:
   engine: external   # or both
   external:
-    provider: mem0   # Choose one: openjiuwen | mem0 | openviking | <plugin-name>
+    provider: memtier   # Choose one: openjiuwen | mem0 | openviking | lakebase | memtier | <plugin-name>
     user_id: __default__
     scope_id: __default__
 
@@ -60,6 +60,12 @@ memory:
       api_key: ""
       account: root
       user: default
+    memtier:
+      workspace: ""
+      project: default
+      top_k: 20
+      token_budget: 2400
+      stage1_k1: 10
 ```
 
 #### Supported Providers
@@ -69,6 +75,7 @@ memory:
 | `openjiuwen` | Local long-term memory (KV + Vector + DB) | None (uses default ~/.jiuwenswarm/memory/ltm) |
 | `mem0` | Cloud fact extraction & semantic retrieval | `api_key` (from mem0.ai) |
 | `openviking` | ByteDance context database | `endpoint`, `api_key` |
+| `memtier` | Local tiered memory using episodic JSONL, semantic facts, and optional vectors | None; defaults to the JiuwenSwarm workspace |
 | `<plugin-name>` | Custom plugin | ~/.jiuwenswarm/plugins/memory/<name>/ |
 
 #### External Memory Environment Variables
@@ -82,6 +89,9 @@ memory:
 | `MEM0_USER_ID` | Mem0 user identifier |
 | `OPENVIKING_ENDPOINT` | OpenViking service address |
 | `OPENVIKING_API_KEY` | OpenViking API key |
+| `MEMTIER_WORKSPACE` | MemTier workspace; defaults to the JiuwenSwarm workspace when configured through the external rail |
+| `MEMTIER_PROJECT` | MemTier project namespace |
+| `MEMTIER_VECTOR_ENABLED` | Enables optional local vector retrieval |
 
 ### Dreaming Configuration
 

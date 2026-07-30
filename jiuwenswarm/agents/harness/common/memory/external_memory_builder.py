@@ -6,6 +6,7 @@ Dispatches on `memory.external.provider`:
   - openjiuwen  -> OpenJiuwenMemoryProvider (builds its own KV/Vector/DB from config)
   - mem0        -> Mem0MemoryProvider
   - openviking  -> OpenVikingMemoryProvider
+  - memtier     -> MemTierMemoryProvider
   - <plugin>    -> user-installed plugin from ~/.jiuwenswarm/plugins/memory/
   - ""          -> disabled (returns None)
 
@@ -23,7 +24,7 @@ from .external_memory_config import (
 
 logger = logging.getLogger(__name__)
 
-_BUILTIN_PROVIDERS = {"openjiuwen", "mem0", "openviking"}
+_BUILTIN_PROVIDERS = {"openjiuwen", "mem0", "openviking", "lakebase", "memtier"}
 
 
 def build_external_memory_rail(
@@ -52,6 +53,8 @@ def build_external_memory_rail(
             provider = _build_openviking_provider(ext_cfg)
         elif provider_name == "lakebase":
             provider = _build_lakebase_provider(ext_cfg)
+        elif provider_name == "memtier":
+            provider = _build_memtier_provider(ext_cfg, workspace_dir)
         else:
             provider = _load_plugin_provider(provider_name, ext_cfg.get("allowed_plugins") or None)
     except Exception as exc:
@@ -184,6 +187,44 @@ def _build_lakebase_provider(ext_cfg: Dict[str, Any]):
         base_url, base_id,
     )
     return provider
+
+
+def _build_memtier_provider(ext_cfg: Dict[str, Any], workspace_dir: str = "."):
+    from jiuwenclaw_memtier.external_provider import MemTierMemoryProvider
+
+    mt_cfg = ext_cfg.get("memtier") or {}
+    workspace = (
+        mt_cfg.get("workspace")
+        or os.environ.get("MEMTIER_WORKSPACE")
+        or workspace_dir
+    )
+    project = mt_cfg.get("project") or os.environ.get("MEMTIER_PROJECT", "default")
+    top_k = _optional_int(mt_cfg.get("top_k") or os.environ.get("MEMTIER_TOP_K"))
+    token_budget = _optional_int(
+        mt_cfg.get("token_budget") or os.environ.get("MEMTIER_TOKEN_BUDGET")
+    )
+    stage1_k1 = _optional_int(mt_cfg.get("stage1_k1") or os.environ.get("MEMTIER_K1"))
+
+    provider = MemTierMemoryProvider(
+        workspace=workspace,
+        project=project,
+        top_k=top_k,
+        token_budget=token_budget,
+        stage1_k1=stage1_k1,
+    )
+    if not provider.is_available():
+        logger.warning("[ExternalMemoryBuilder] MemTier unavailable")
+        return None
+    return provider
+
+
+def _optional_int(value: Any) -> Optional[int]:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _load_plugin_provider(name: str, allowed: Optional[list] = None):

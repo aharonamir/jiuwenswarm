@@ -43,6 +43,45 @@ def _install_stubs():
                 pass
         ruamel_yaml.YAML = _YAML
 
+    for pkg in [
+        "openjiuwen",
+        "openjiuwen.core",
+        "openjiuwen.core.memory",
+        "openjiuwen.core.memory.config",
+        "openjiuwen.core.foundation",
+        "openjiuwen.core.foundation.store",
+        "openjiuwen.core.foundation.llm",
+        "openjiuwen.core.foundation.llm.schema",
+    ]:
+        mod = _ensure_module(pkg)
+        mod.__path__ = []
+
+    mem_cfg_mod = _ensure_module("openjiuwen.core.memory.config.config")
+    if not hasattr(mem_cfg_mod, "MemoryScopeConfig"):
+        class MemoryScopeConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        mem_cfg_mod.MemoryScopeConfig = MemoryScopeConfig
+
+    embed_cfg_mod = _ensure_module("openjiuwen.core.foundation.store.base_embedding")
+    if not hasattr(embed_cfg_mod, "EmbeddingConfig"):
+        class EmbeddingConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        embed_cfg_mod.EmbeddingConfig = EmbeddingConfig
+
+    llm_cfg_mod = _ensure_module("openjiuwen.core.foundation.llm.schema.config")
+    if not hasattr(llm_cfg_mod, "ModelRequestConfig"):
+        class ModelRequestConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        llm_cfg_mod.ModelRequestConfig = ModelRequestConfig
+    if not hasattr(llm_cfg_mod, "ModelClientConfig"):
+        class ModelClientConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        llm_cfg_mod.ModelClientConfig = ModelClientConfig
+
 
 _install_stubs()
 
@@ -76,6 +115,7 @@ utils_stub.get_agent_workspace_dir = _saved_get_agent_workspace_dir
 @pytest.fixture(autouse=True)
 def _isolate_utils_stubs():
     """Re-apply utils stubs for this module's tests, restore after."""
+    _install_stubs()
     utils_stub.get_config_file = _get_config_file
     utils_stub.get_agent_workspace_dir = _get_agent_workspace_dir
     yield
@@ -139,6 +179,7 @@ def test_external_config_defaults_when_missing():
     assert out["openjiuwen"] == {}
     assert out["mem0"] == {}
     assert out["openviking"] == {}
+    assert out["memtier"] == {}
 
 
 def test_external_config_values_passthrough():

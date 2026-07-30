@@ -94,6 +94,32 @@ class _FakeLakeBaseProvider:
         return _FakeLakeBaseProvider.available
 
 
+class _FakeMemTierProvider:
+    last_init_kwargs = None
+    available = True
+
+    def __init__(
+        self,
+        *,
+        workspace="",
+        project="default",
+        top_k=None,
+        token_budget=None,
+        stage1_k1=None,
+    ):
+        _FakeMemTierProvider.last_init_kwargs = {
+            "workspace": workspace,
+            "project": project,
+            "top_k": top_k,
+            "token_budget": token_budget,
+            "stage1_k1": stage1_k1,
+        }
+
+    @staticmethod
+    def is_available() -> bool:
+        return _FakeMemTierProvider.available
+
+
 def _ensure_module(name: str) -> ModuleType:
     mod = sys.modules.get(name)
     if mod is None:
@@ -108,10 +134,16 @@ def _install_agent_core_stubs():
         "openjiuwen.core",
         "openjiuwen.core.memory",
         "openjiuwen.core.memory.external",
+        "openjiuwen.core.memory.config",
+        "openjiuwen.core.foundation",
+        "openjiuwen.core.foundation.store",
+        "openjiuwen.core.foundation.llm",
+        "openjiuwen.core.foundation.llm.schema",
         "openjiuwen.harness",
         "openjiuwen.harness.rails",
     ]:
-        _ensure_module(pkg)
+        mod = _ensure_module(pkg)
+        mod.__path__ = []
 
     rails_mod = _ensure_module("openjiuwen.harness.rails")
     rails_mod.ExternalMemoryRail = _FakeRail
@@ -130,6 +162,38 @@ def _install_agent_core_stubs():
 
     lb_mod = _ensure_module("openjiuwen.core.memory.external.lakebase_memory_provider")
     lb_mod.LakeBaseMemoryProvider = _FakeLakeBaseProvider
+
+    mem_cfg_mod = _ensure_module("openjiuwen.core.memory.config.config")
+    if not hasattr(mem_cfg_mod, "MemoryScopeConfig"):
+        class MemoryScopeConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        mem_cfg_mod.MemoryScopeConfig = MemoryScopeConfig
+
+    embed_cfg_mod = _ensure_module("openjiuwen.core.foundation.store.base_embedding")
+    if not hasattr(embed_cfg_mod, "EmbeddingConfig"):
+        class EmbeddingConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        embed_cfg_mod.EmbeddingConfig = EmbeddingConfig
+
+    llm_cfg_mod = _ensure_module("openjiuwen.core.foundation.llm.schema.config")
+    if not hasattr(llm_cfg_mod, "ModelRequestConfig"):
+        class ModelRequestConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        llm_cfg_mod.ModelRequestConfig = ModelRequestConfig
+    if not hasattr(llm_cfg_mod, "ModelClientConfig"):
+        class ModelClientConfig:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        llm_cfg_mod.ModelClientConfig = ModelClientConfig
+
+    mt_pkg = _ensure_module("jiuwenclaw_memtier")
+    mt_pkg.__path__ = []
+    mt_mod = _ensure_module("jiuwenclaw_memtier.external_provider")
+    mt_pkg.external_provider = mt_mod
+    mt_mod.MemTierMemoryProvider = _FakeMemTierProvider
 
 
 def _install_jiuwenswarm_stubs():
@@ -175,6 +239,14 @@ _AGENT_CORE_STUB_MODULES = [
     "openjiuwen.core",
     "openjiuwen.core.memory",
     "openjiuwen.core.memory.external",
+    "openjiuwen.core.memory.config",
+    "openjiuwen.core.memory.config.config",
+    "openjiuwen.core.foundation",
+    "openjiuwen.core.foundation.store",
+    "openjiuwen.core.foundation.store.base_embedding",
+    "openjiuwen.core.foundation.llm",
+    "openjiuwen.core.foundation.llm.schema",
+    "openjiuwen.core.foundation.llm.schema.config",
     "openjiuwen.harness",
     "openjiuwen.harness.rails",
     "openjiuwen.harness.rails.external_memory_rail",
@@ -182,6 +254,8 @@ _AGENT_CORE_STUB_MODULES = [
     "openjiuwen.core.memory.external.mem0_provider",
     "openjiuwen.core.memory.external.openviking_memory_provider",
     "openjiuwen.core.memory.external.lakebase_memory_provider",
+    "jiuwenclaw_memtier",
+    "jiuwenclaw_memtier.external_provider",
 ]
 
 _STUB_ATTR_OVERRIDES = [
@@ -191,6 +265,7 @@ _STUB_ATTR_OVERRIDES = [
     ("openjiuwen.core.memory.external.mem0_provider", "Mem0MemoryProvider"),
     ("openjiuwen.core.memory.external.openviking_memory_provider", "OpenVikingMemoryProvider"),
     ("openjiuwen.core.memory.external.lakebase_memory_provider", "LakeBaseMemoryProvider"),
+    ("jiuwenclaw_memtier.external_provider", "MemTierMemoryProvider"),
 ]
 
 _saved_sys_modules: dict = {
@@ -269,6 +344,8 @@ def reset_spy_state():
     _FakeVikingProvider.available = True
     _FakeLakeBaseProvider.last_init_kwargs = None
     _FakeLakeBaseProvider.available = True
+    _FakeMemTierProvider.last_init_kwargs = None
+    _FakeMemTierProvider.available = True
     yield
 
 
@@ -492,6 +569,49 @@ def test_lakebase_partial_yaml_env_blend(monkeypatch):
     assert init["base_url"] == "http://yaml-lb:9090/api/v1"  # YAML wins
     assert init["base_id"] == "env_base"                     # env fills
     assert init["database_id"] == "db_agent_memory"                 # default fills
+
+
+# ---------------------------------------------------------------------------
+# MemTier branch
+# ---------------------------------------------------------------------------
+
+def test_memtier_yaml_config(monkeypatch):
+    monkeypatch.delenv("MEMTIER_WORKSPACE", raising=False)
+    cfg = {"memory": {"external": {
+        "provider": "memtier",
+        "memtier": {
+            "workspace": "/tmp/memtier-workspace",
+            "project": "proj-a",
+            "top_k": "7",
+            "token_budget": "1200",
+            "stage1_k1": "4",
+        },
+    }}}
+    assert emb.build_external_memory_rail(cfg, workspace_dir="/tmp/jw-workspace") is not None
+    assert _FakeMemTierProvider.last_init_kwargs == {
+        "workspace": "/tmp/memtier-workspace",
+        "project": "proj-a",
+        "top_k": 7,
+        "token_budget": 1200,
+        "stage1_k1": 4,
+    }
+
+
+def test_memtier_env_and_workspace_fallback(monkeypatch):
+    monkeypatch.setenv("MEMTIER_PROJECT", "env-project")
+    monkeypatch.setenv("MEMTIER_TOP_K", "11")
+    cfg = {"memory": {"external": {"provider": "memtier", "memtier": {}}}}
+    assert emb.build_external_memory_rail(cfg, workspace_dir="/tmp/jw-workspace") is not None
+    init = _FakeMemTierProvider.last_init_kwargs
+    assert init["workspace"] == "/tmp/jw-workspace"
+    assert init["project"] == "env-project"
+    assert init["top_k"] == 11
+
+
+def test_memtier_unavailable_returns_none():
+    _FakeMemTierProvider.available = False
+    cfg = {"memory": {"external": {"provider": "memtier", "memtier": {}}}}
+    assert emb.build_external_memory_rail(cfg) is None
 
 
 # ---------------------------------------------------------------------------
