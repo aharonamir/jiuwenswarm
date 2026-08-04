@@ -21,7 +21,7 @@ import threading
 import time
 from collections import Counter
 from contextvars import ContextVar, Token
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from pathlib import Path
 from shutil import which
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, List, Optional, Tuple
@@ -350,6 +350,22 @@ def get_runtime_tool_session_id() -> str | None:
     return _CRON_TOOL_SESSION_ID.get()
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_REASONING_TOOL_LOOP_COMPACT_CONFIG: dict[str, Any] = {
+    "enabled": True,
+    "consecutive_threshold": 3,
+    "tool_args_consecutive_threshold": 5,
+    "reasoning_min_chars": 4,
+    "reasoning_preview_max_chars": 512,
+    "bailout_threshold": 3,
+    "tool_args_bailout_threshold": 2,
+}
+
+_DEFAULT_TASK_LOOP_NO_PROGRESS_GUARD: dict[str, Any] = {
+    "enabled": True,
+    "max_consecutive_empty_answers": 3,
+    "min_answer_chars": 80,
+}
 
 _PERSISTENT_CHECKPOINTER_LOCK: asyncio.Lock | None = None
 _PERSISTENT_CHECKPOINTER_LOCK_LOOP: asyncio.AbstractEventLoop | None = None
@@ -783,6 +799,53 @@ def _resolve_session_memory_config(context_engine_cfg: dict[str, Any]) -> dict[s
     return None
 
 
+def _merge_context_engine_defaults(context_engine_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Preserve loop compaction defaults when users override context config."""
+    merged = dict(context_engine_cfg)
+    if not bool(merged.get("enabled", True)):
+        return merged
+
+    raw_reasoning_cfg = merged.get("reasoning_tool_loop_compact_config")
+    if raw_reasoning_cfg is False:
+        merged["reasoning_tool_loop_compact_config"] = {"enabled": False}
+    elif isinstance(raw_reasoning_cfg, dict):
+        merged["reasoning_tool_loop_compact_config"] = {
+            **_DEFAULT_REASONING_TOOL_LOOP_COMPACT_CONFIG,
+            **raw_reasoning_cfg,
+        }
+    else:
+        merged["reasoning_tool_loop_compact_config"] = dict(
+            _DEFAULT_REASONING_TOOL_LOOP_COMPACT_CONFIG
+        )
+    return merged
+
+
+def _task_loop_no_progress_guard_config(react_cfg: dict[str, Any] | None) -> dict[str, Any]:
+    """Resolve task-loop no-progress guard config from react YAML."""
+    react_cfg = react_cfg if isinstance(react_cfg, dict) else {}
+    raw = react_cfg.get("task_loop_no_progress_guard")
+    if raw is False:
+        return {**_DEFAULT_TASK_LOOP_NO_PROGRESS_GUARD, "enabled": False}
+    raw_cfg = raw if isinstance(raw, dict) else {}
+    merged = {**_DEFAULT_TASK_LOOP_NO_PROGRESS_GUARD, **raw_cfg}
+    merged["enabled"] = bool(merged.get("enabled", True))
+    merged["max_consecutive_empty_answers"] = parse_int(
+        merged.get("max_consecutive_empty_answers"),
+        _DEFAULT_TASK_LOOP_NO_PROGRESS_GUARD["max_consecutive_empty_answers"],
+    )
+    merged["min_answer_chars"] = parse_int(
+        merged.get("min_answer_chars"),
+        _DEFAULT_TASK_LOOP_NO_PROGRESS_GUARD["min_answer_chars"],
+    )
+    return merged
+
+
+def _deep_agent_config_supports(field_name: str) -> bool:
+    if not is_dataclass(DeepAgentConfig):
+        return hasattr(DeepAgentConfig, field_name)
+    return field_name in {field.name for field in fields(DeepAgentConfig)}
+
+
 def _build_context_processor_rail(config: dict[str, Any]) -> ContextProcessorRail | None:
     """Build ContextProcessorRail with user config.
 
@@ -794,7 +857,11 @@ def _build_context_processor_rail(config: dict[str, Any]) -> ContextProcessorRai
     try:
         user_processors: List[Tuple[str, dict]] = []
         raw_context_engine_cfg = config.get("context_engine_config", {})
-        context_engine_cfg = raw_context_engine_cfg if isinstance(raw_context_engine_cfg, dict) else {}
+        context_engine_cfg = (
+            _merge_context_engine_defaults(raw_context_engine_cfg)
+            if isinstance(raw_context_engine_cfg, dict)
+            else _merge_context_engine_defaults({})
+        )
         session_memory_cfg = _resolve_session_memory_config(context_engine_cfg)
 
         offloader_cfg = context_engine_cfg.get("message_summary_offloader_config", {})
@@ -4816,31 +4883,39 @@ class JiuWenSwarmDeepAdapter:
             tool.card if hasattr(tool, "card") else tool for tool in (tool_cards or [])
         ]
         configured_subagents, should_add_general_agent = self._build_configured_subagents(model, config, config_base)
-        return DeepAgentConfig(
-            model=model,
-            card=agent_card,
-            tool_owner_id=self._tool_owner_id(),
-            system_prompt=build_agent_identity_prompt(
+        deep_agent_config_kwargs = {
+            "model": model,
+            "card": agent_card,
+            "tool_owner_id": self._tool_owner_id(),
+            "system_prompt": build_agent_identity_prompt(
                 language=self._resolve_prompt_language(),
             ),
-            context_engine_config=_deep_agent_context_engine_config(config),
-            kv_cache_affinity_config=_deep_agent_kv_cache_affinity_config(config, model),
-            enable_task_loop=self._resolve_enable_task_loop(config, config_base),
-            max_iterations=config.get("max_iterations", 15),
-            subagents=configured_subagents,
-            add_general_purpose_agent=should_add_general_agent,
-            tools=normalized_tool_cards,
-            workspace=workspace_obj,
-            skills=None,
-            backend=None,
-            sys_operation=self._sys_operation,
-            language=resolved_language,
-            prompt_mode=None,
-            rails=rails,
-            vision_model_config=self._vision_model_config,
-            audio_model_config=self._audio_model_config,
-            enable_read_image_multimodal=self._resolve_enable_read_image_multimodal(config),
-            completion_timeout=config.get("completion_timeout", 3600.0),
+            "context_engine_config": _deep_agent_context_engine_config(config),
+            "kv_cache_affinity_config": _deep_agent_kv_cache_affinity_config(config, model),
+            "enable_task_loop": self._resolve_enable_task_loop(config, config_base),
+            "max_iterations": config.get("max_iterations", 15),
+            "subagents": configured_subagents,
+            "add_general_purpose_agent": should_add_general_agent,
+            "tools": normalized_tool_cards,
+            "workspace": workspace_obj,
+            "skills": None,
+            "backend": None,
+            "sys_operation": self._sys_operation,
+            "language": resolved_language,
+            "prompt_mode": None,
+            "rails": rails,
+            "vision_model_config": self._vision_model_config,
+            "audio_model_config": self._audio_model_config,
+            "enable_read_image_multimodal": self._resolve_enable_read_image_multimodal(config),
+            "completion_timeout": config.get("completion_timeout", 3600.0),
+        }
+        if _deep_agent_config_supports("task_loop_no_progress_guard"):
+            deep_agent_config_kwargs["task_loop_no_progress_guard"] = (
+                _task_loop_no_progress_guard_config(config)
+            )
+
+        return DeepAgentConfig(
+            **deep_agent_config_kwargs
         )
 
     def _update_permission_rail(self, config_base: dict[str, Any] | None) -> None:
@@ -5361,6 +5436,7 @@ class JiuWenSwarmDeepAdapter:
             language=self._resolve_runtime_language(),
             auto_create_workspace=False
         )
+        common_kwargs["task_loop_no_progress_guard"] = _task_loop_no_progress_guard_config(config)
 
         self._instance = create_deep_agent(
             **common_kwargs,
