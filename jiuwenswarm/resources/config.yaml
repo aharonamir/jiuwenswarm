@@ -440,6 +440,11 @@ react:
   enable_task_loop: true
   max_iterations: 100
   budget_warning_threshold: 10  # warn agent when this many iterations remain
+  # Stop unattended task-loop runs after repeated empty/near-empty no-tool answers.
+  task_loop_no_progress_guard:
+    enabled: true
+    max_consecutive_empty_answers: 3
+    min_answer_chars: 80
   # Multi-rollout: spawn N parallel agent attempts with different strategies
   # and return the best result. Increases cost ~N× but improves quality
   # on hard tasks. Only affects DeepAgent.invoke() (not streaming).

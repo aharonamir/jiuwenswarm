@@ -261,6 +261,8 @@ Context compression manages dialogue history retention strategies.
 
 This section also provides a **Compute Affinity (KV Release)** toggle (`react.context_engine_config.enable_kv_cache_release`, default `false`).
 
+When `react.context_engine_config.enabled=true`, JiuwenSwarm preserves the default `reasoning_tool_loop_compact_config` values even if a runtime or benchmark profile overrides only part of `react.context_engine_config`. Benchmark configs that replace the whole section should keep or intentionally disable `reasoning_tool_loop_compact_config`; otherwise repeated reasoning/tool loops lose their compaction guard.
+
 When enabled, the system will:
 
 1. Monitor message count and token usage
@@ -458,6 +460,7 @@ These are **conceptual** paths in the main configuration for cross-reference wit
 | `heartbeat.every` | Heartbeat interval (seconds) | `3600` |
 | `react.context_engine_config.dialogue_compressor_config.tokens_threshold` | Dialogue compression token threshold | `100000` |
 | `react.context_engine_config.round_level_compressor_config.trigger_context_ratio` | Round-level compression trigger ratio of the effective context budget | `0.9` |
+| `react.task_loop_no_progress_guard` | Stops unattended task-loop runs after repeated empty or near-empty no-tool answers | `enabled: true`, `max_consecutive_empty_answers: 3`, `min_answer_chars: 80` |
 | `react.budget_warning_threshold` | Number of remaining iterations at which the agent receives a wrap-up warning in its system prompt, telling it to prioritise finishing current work | `10` |
 | `skills.external_dirs` | Extra skill directories loaded as if locally installed. Accepts a YAML list or a semicolon-separated string (also settable via `EXTERNAL_SKILL_DIRS` env var). Skills here are fully equivalent to UI-installed skills. | `""` (empty) |
 | `skills.external_only` | When `true` and `skills.external_dirs` is non-empty, the personal skills directory is excluded — only external-dir skills are visible to the agent. Use in benchmark / CI environments to prevent unrelated installed skills from appearing. | `false` |
