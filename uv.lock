@@ -1765,7 +1765,7 @@ wheels = [
 
 [[package]]
 name = "jiuwenswarm"
-version = "0.2.3"
+version = "0.2.3.post1"
 source = { editable = "." }
 dependencies = [
     { name = "a2ui-agent-sdk" },
@@ -1783,6 +1783,7 @@ dependencies = [
     { name = "json-repair" },
     { name = "lark-oapi" },
     { name = "loguru" },
+    { name = "lxml" },
     { name = "mutagen" },
     { name = "numpy" },
     { name = "openjiuwen" },
@@ -1791,7 +1792,6 @@ dependencies = [
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "pgvector" },
-    { name = "lxml" },
     { name = "pillow" },
     { name = "portalocker" },
     { name = "psutil" },
