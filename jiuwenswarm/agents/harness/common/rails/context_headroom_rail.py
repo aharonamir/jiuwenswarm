@@ -99,7 +99,7 @@ class ContextHeadroomRail(DeepAgentRail):
             self.system_prompt_builder.add_section(
                 PromptSection(
                     name=_SECTION_NAME,
-                    content=_CRITICAL_CONTENT,
+                    content={"en": _CRITICAL_CONTENT},
                     priority=_PRIORITY,
                 )
             )
@@ -110,7 +110,7 @@ class ContextHeadroomRail(DeepAgentRail):
             self.system_prompt_builder.add_section(
                 PromptSection(
                     name=_SECTION_NAME,
-                    content=_WARN_CONTENT,
+                    content={"en": _WARN_CONTENT},
                     priority=_PRIORITY,
                 )
             )

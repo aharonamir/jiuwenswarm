@@ -1765,7 +1765,7 @@ wheels = [
 
 [[package]]
 name = "jiuwenswarm"
-version = "0.2.3.post1"
+version = "0.2.3.post2"
 source = { editable = "." }
 dependencies = [
     { name = "a2ui-agent-sdk" },

@@ -445,7 +445,13 @@ react:
   task_loop_no_progress_guard:
     enabled: false
     max_consecutive_empty_answers: 3
-    min_answer_chars: 80
+    min_answer_chars: 20
+  # Skill budget: gently truncate skill prompts by dropping whole low-ranked skills.
+  # Disabled by default; enable in benchmark or per-deployment config.
+  skill_budget:
+    enabled: false
+    max_skills: 4
+    max_total_chars: 20000
   # Multi-rollout: spawn N parallel agent attempts with different strategies
   # and return the best result. Increases cost ~N× but improves quality
   # on hard tasks. Only affects DeepAgent.invoke() (not streaming).

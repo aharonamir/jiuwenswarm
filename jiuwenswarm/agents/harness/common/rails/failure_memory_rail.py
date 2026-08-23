@@ -196,7 +196,7 @@ class FailureMemoryRail(DeepAgentRail):
         self.system_prompt_builder.add_section(
             PromptSection(
                 name=_SECTION_NAME,
-                content="\n".join(lines),
+                content={"en": "\n".join(lines)},
                 priority=_WARNING_PRIORITY,
             )
         )

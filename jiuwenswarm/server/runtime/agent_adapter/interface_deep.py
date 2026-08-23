@@ -379,7 +379,7 @@ _DEFAULT_REASONING_TOOL_LOOP_COMPACT_CONFIG: dict[str, Any] = {
 _DEFAULT_TASK_LOOP_NO_PROGRESS_GUARD: dict[str, Any] = {
     "enabled": False,
     "max_consecutive_empty_answers": 3,
-    "min_answer_chars": 80,
+    "min_answer_chars": 20,
 }
 
 _PERSISTENT_CHECKPOINTER_LOCK: asyncio.Lock | None = None
@@ -4466,6 +4466,17 @@ class JiuWenSwarmDeepAdapter:
         if _deep_agent_config_supports("task_loop_no_progress_guard"):
             deep_agent_config_kwargs["task_loop_no_progress_guard"] = (
                 _task_loop_no_progress_guard_config(config)
+            )
+        # Skill budget: parse from react.skill_budget if present
+        _skill_budget_cfg = config.get("skill_budget", {})
+        if isinstance(_skill_budget_cfg, dict) and _skill_budget_cfg.get("enabled"):
+            _sb_max_skills = _skill_budget_cfg.get("max_skills")
+            _sb_max_total_chars = _skill_budget_cfg.get("max_total_chars")
+            deep_agent_config_kwargs["skill_budget_max_skills"] = (
+                int(_sb_max_skills) if _sb_max_skills is not None else None
+            )
+            deep_agent_config_kwargs["skill_budget_max_total_chars"] = (
+                int(_sb_max_total_chars) if _sb_max_total_chars is not None else None
             )
 
         return DeepAgentConfig(

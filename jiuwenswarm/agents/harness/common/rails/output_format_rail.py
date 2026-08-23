@@ -172,7 +172,7 @@ class OutputFormatRail(DeepAgentRail):
         self.system_prompt_builder.add_section(
             PromptSection(
                 name=_SECTION_NAME,
-                content=content,
+                content={"en": content},
                 priority=_PRIORITY,
             )
         )

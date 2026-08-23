@@ -148,7 +148,7 @@ class StepBackRail(DeepAgentRail):
             self.system_prompt_builder.add_section(
                 PromptSection(
                     name=_SECTION_NAME,
-                    content=_build_section(consecutive),
+                    content={"en": _build_section(consecutive)},
                     priority=_PRIORITY,
                 )
             )

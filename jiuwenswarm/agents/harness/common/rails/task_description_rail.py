@@ -88,7 +88,7 @@ class TaskDescriptionRail(DeepAgentRail):
         self.system_prompt_builder.add_section(
             PromptSection(
                 name=_SECTION_NAME,
-                content=f"# Task Description\n\n{content}",
+                content={"en": f"# Task Description\n\n{content}"},
                 priority=_SECTION_PRIORITY,
             )
         )

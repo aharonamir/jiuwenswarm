@@ -66,7 +66,7 @@ class AutonomousModeRail(DeepAgentRail):
             self.system_prompt_builder.add_section(
                 PromptSection(
                     name=_SECTION_NAME,
-                    content=_AUTONOMOUS_DIRECTIVE,
+                    content={"en": _AUTONOMOUS_DIRECTIVE},
                     priority=_SECTION_PRIORITY,
                 )
             )
@@ -85,7 +85,7 @@ class AutonomousModeRail(DeepAgentRail):
         self.system_prompt_builder.add_section(
             PromptSection(
                 name=_SECTION_NAME,
-                content=_AUTONOMOUS_DIRECTIVE,
+                content={"en": _AUTONOMOUS_DIRECTIVE},
                 priority=_SECTION_PRIORITY,
             )
         )

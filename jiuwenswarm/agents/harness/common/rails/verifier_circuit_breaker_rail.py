@@ -256,7 +256,7 @@ class VerifierCircuitBreakerRail(DeepAgentRail):
             self.system_prompt_builder.add_section(
                 PromptSection(
                     name=_SECTION_NAME,
-                    content=_build_section(consecutive, self._break_after),
+                    content={"en": _build_section(consecutive, self._break_after)},
                     priority=_PRIORITY,
                 )
             )
