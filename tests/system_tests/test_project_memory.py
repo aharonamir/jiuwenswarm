@@ -27,6 +27,7 @@ from jiuwenswarm.agents.harness.common.rails.project_memory.files import (
     LoadedMemoryFile,
     PRIORITY,
 )
+from jiuwenswarm.agents.harness.common.rails.project_memory import files as _files_mod
 from jiuwenswarm.agents.harness.common.rails import (
     ProjectMemoryRail,
 )
@@ -86,7 +87,9 @@ async def _project_memory_body(agent: MagicMock, language: str = "en") -> str:
 
 
 @pytest.fixture(autouse=True)
-def _clear_cache():
+def _clear_cache(monkeypatch):
+    monkeypatch.setattr(_files_mod, "APP_WORKSPACE_MEMORY_FILES", ())
+    monkeypatch.setattr(_files_mod, "APP_WORKSPACE_MEMORY_GLOBS", ())
     clear_project_memory_cache()
     yield
     clear_project_memory_cache()

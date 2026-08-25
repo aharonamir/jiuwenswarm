@@ -41,11 +41,12 @@ class ProjectMemoryRail(DeepAgentRail):
 
     * **Project root**: ``JIUWENSWARM.md``, ``JIUWENSWARM.local.md``,
       ``.jiuwen/JIUWENSWARM.md``, ``.jiuwen/rules/*.md``
+    * **App workspace**: ``~/.jiuwenswarm/agent/workspace/.jiuwen/rules/*.md``
     * **User level**: ``~/.jiuwen/JIUWENSWARM.md``, ``~/.jiuwen/rules/*.md``
     * **Managed**: ``/etc/jiuwen/JIUWENSWARM.md``, ``/etc/jiuwen/rules/*.md``
     * **Additional dirs**: explicit project-memory directories passed to the rail
 
-    Priority (low -> high): ``managed < user < project (root -> cwd) < local``.
+    Priority (low -> high): ``managed < app < user < project (root -> cwd) < local``.
     """
 
     WRITE_LIKE_TOOLS = frozenset({

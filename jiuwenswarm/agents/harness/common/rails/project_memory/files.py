@@ -39,7 +39,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Iterable, Optional
 
-from jiuwenswarm.common.utils import logger
+from jiuwenswarm.common.utils import get_agent_workspace_dir, logger
 
 # ---------------------------------------------------------------------------
 # Discovery configuration
@@ -77,6 +77,15 @@ USER_MEMORY_GLOBS: tuple[str, ...] = (
     "~/.jiuwen/rules/*.md",
 )
 
+APP_WORKSPACE_MEMORY_FILES: tuple[tuple[str, str], ...] = (
+    ("JIUWENSWARM.md", "app"),
+    (".jiuwen/JIUWENSWARM.md", "app"),
+)
+
+APP_WORKSPACE_MEMORY_GLOBS: tuple[str, ...] = (
+    ".jiuwen/rules/*.md",
+)
+
 MANAGED_MEMORY_FILES: tuple[str, ...] = (
     "/etc/jiuwen/JIUWENSWARM.md",
 )
@@ -92,6 +101,7 @@ MAX_MEMORY_CHARACTER_COUNT = 40_000
 # Priority: smaller = applied first (later = semantically override).
 PRIORITY: dict[str, int] = {
     "managed": 10,
+    "app": 15,
     "user": 20,
     "project": 30,
     "local": 40,
@@ -214,6 +224,26 @@ def discover_and_load_memory_files(
     _scan_absolute_globs(
         MANAGED_MEMORY_GLOBS,
         kind="managed",
+        out=files,
+        seen=seen,
+        target_path=target_key,
+        watch_paths=watch_paths,
+    )
+
+    app_workspace_dir = get_agent_workspace_dir()
+    watch_paths.add(_safe_resolve(app_workspace_dir))
+    _scan_relative_files(
+        base_dir=app_workspace_dir,
+        entries=APP_WORKSPACE_MEMORY_FILES,
+        out=files,
+        seen=seen,
+        target_path=target_key,
+        watch_paths=watch_paths,
+    )
+    _scan_relative_globs(
+        base_dir=app_workspace_dir,
+        patterns=APP_WORKSPACE_MEMORY_GLOBS,
+        kind="app",
         out=files,
         seen=seen,
         target_path=target_key,
@@ -942,6 +972,8 @@ def _short(path: str) -> str:
 
 __all__ = [
     "ADDITIONAL_DIRECTORIES_ENV",
+    "APP_WORKSPACE_MEMORY_FILES",
+    "APP_WORKSPACE_MEMORY_GLOBS",
     "DEFAULT_MAX_CHARS",
     "GitWorktreeInfo",
     "LoadedMemoryFile",

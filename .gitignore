@@ -89,7 +89,10 @@ jiuwenswarm/agentserver/tools/browser-move/.browser-profiles
 jiuwenswarm/agentserver/tools/browser-move/screenshots
 
 jiuwenswarm/workspace/.whatsapp-auth/
-jiuwenswarm/resources/agent/workspace/
+jiuwenswarm/resources/agent/workspace/*
+!jiuwenswarm/resources/agent/workspace/.jiuwen/
+!jiuwenswarm/resources/agent/workspace/.jiuwen/rules/
+!jiuwenswarm/resources/agent/workspace/.jiuwen/rules/sources.md
 jiuwenswarm/resources/tui/bin/
 packages/jiuwenswarm-tui/jiuwenswarm_tui/resources/tui/bin/
 packages/jiuwenswarm-tui/jiuwenswarm_tui/resources/tui-bin/

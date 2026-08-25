@@ -26,6 +26,8 @@ def _isolate_user_and_managed_memory(monkeypatch):
     """Force test-local memory sources and clear cache between tests."""
     monkeypatch.setattr(_files_mod, "USER_MEMORY_FILES", ())
     monkeypatch.setattr(_files_mod, "USER_MEMORY_GLOBS", ())
+    monkeypatch.setattr(_files_mod, "APP_WORKSPACE_MEMORY_FILES", ())
+    monkeypatch.setattr(_files_mod, "APP_WORKSPACE_MEMORY_GLOBS", ())
     monkeypatch.setattr(_files_mod, "MANAGED_MEMORY_FILES", ())
     monkeypatch.setattr(_files_mod, "MANAGED_MEMORY_GLOBS", ())
     _files_mod.clear_project_memory_cache()
@@ -442,6 +444,31 @@ async def test_loads_user_and_managed_rules(monkeypatch):
         assert "USER-RULE" in body
         assert "MANAGED-MEMORY" in body
         assert "MANAGED-RULE" in body
+
+
+@pytest.mark.asyncio
+async def test_loads_app_workspace_rules(monkeypatch):
+    with tempfile.TemporaryDirectory() as td, tempfile.TemporaryDirectory() as app_td:
+        root = Path(td)
+        app_root = Path(app_td)
+        _touch(root, ".git/HEAD", "")
+        _touch(app_root, ".jiuwen/rules/sources.md", "APP-SOURCE-POLICY")
+
+        monkeypatch.setattr(_files_mod, "get_agent_workspace_dir", lambda: app_root)
+        monkeypatch.setattr(
+            _files_mod,
+            "APP_WORKSPACE_MEMORY_GLOBS",
+            (".jiuwen/rules/*.md",),
+        )
+        _files_mod.clear_project_memory_cache()
+
+        rail = ProjectMemoryRail(workspace=str(root), language="en")
+        agent = _make_agent_with_builder()
+        rail.init(agent)
+        await rail.before_model_call(ctx=_make_ctx(agent))
+
+        body = await _project_memory_body(agent, "en")
+        assert "APP-SOURCE-POLICY" in body
 
 
 @pytest.mark.asyncio
