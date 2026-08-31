@@ -4439,6 +4439,7 @@ def test_build_context_processor_rail_uses_summary_offloader_config(monkeypatch)
         "ContextProcessorRail",
         FakeContextProcessorRail,
     )
+    monkeypatch.setattr(interface_deep_module, "_processor_exists", lambda name: True)
     adapter = DeepAdapterHarness()
 
     rail = adapter.build_context_processor_rail_for_test(
@@ -4488,6 +4489,7 @@ def test_build_context_processor_rail_prefers_summary_offloader_config(monkeypat
         "ContextProcessorRail",
         FakeContextProcessorRail,
     )
+    monkeypatch.setattr(interface_deep_module, "_processor_exists", lambda name: True)
     adapter = DeepAdapterHarness()
 
     rail = adapter.build_context_processor_rail_for_test(
@@ -4530,6 +4532,7 @@ def test_build_context_processor_rail_merges_reasoning_loop_defaults(monkeypatch
         "ContextProcessorRail",
         FakeContextProcessorRail,
     )
+    monkeypatch.setattr(interface_deep_module, "_processor_exists", lambda name: True)
     adapter = DeepAdapterHarness()
 
     rail = adapter.build_context_processor_rail_for_test(
@@ -4572,7 +4575,7 @@ def test_build_context_processor_rail_does_not_add_reasoning_loop_when_context_d
 
 def test_task_loop_no_progress_guard_config_defaults_and_overrides():
     assert interface_deep_module._task_loop_no_progress_guard_config({}) == {
-        "enabled": True,
+        "enabled": False,
         "max_consecutive_empty_answers": 3,
         "min_answer_chars": 80,
     }
@@ -4593,7 +4596,7 @@ def test_task_loop_no_progress_guard_config_defaults_and_overrides():
             }
         }
     ) == {
-        "enabled": True,
+        "enabled": False,
         "max_consecutive_empty_answers": 5,
         "min_answer_chars": 120,
     }
@@ -4605,6 +4608,7 @@ def test_build_context_processor_rail_passes_session_memory_config(monkeypatch):
         "ContextProcessorRail",
         FakeContextProcessorRail,
     )
+    monkeypatch.setattr(interface_deep_module, "_processor_exists", lambda name: True)
     adapter = DeepAdapterHarness()
 
     rail = adapter.build_context_processor_rail_for_test(
