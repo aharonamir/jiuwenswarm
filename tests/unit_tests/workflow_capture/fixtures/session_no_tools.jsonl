@@ -1,0 +1,2 @@
+{"id": "chat-7483425b8227:user", "role": "user", "request_id": "chat-7483425b8227", "channel_id": "tui", "timestamp": 1785684112.6775064, "content": "hello", "mode": "code.normal"}
+{"id": "chat-7483425b8227:assistant", "role": "assistant", "request_id": "chat-7483425b8227", "channel_id": "tui", "timestamp": 1785684136.9531496, "content": "Hello! How can I help you today?", "event_type": "chat.final", "final_mode": "patch_segment", "reasoning_content": "The user just said \"hello\". This is a simple greeting, so I'll respond in English as instructed.", "mode": "code.normal"}

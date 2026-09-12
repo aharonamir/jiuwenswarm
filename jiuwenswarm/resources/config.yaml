@@ -76,6 +76,14 @@ symphony:
     # Index construction uses the default configured model. An optional llm
     # mapping can override model, api_key, base_url and seed for this builder.
 
+# Workflow Capture：从一次满意的会话中提取可复用工作流，保存为可执行 IR
+workflow_capture:
+  enabled: true
+  # 留空时默认与技能库同级：~/.jiuwenswarm/agent/workspace/workflows
+  store_root: ""
+  # 单次捕获处理的会话事件数上限（对应 plan.md 的 ~10k 规模目标）
+  max_session_events: 10000
+
 # Auto Memory：对话结束后自动提取记忆，按项目隔离存储
 # 存储路径：~/.jiuwenswarm/projects/{sanitized-project-path}/memory/
 # 类似 Claude Code 的 auto-memory 功能

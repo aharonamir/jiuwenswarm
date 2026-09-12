@@ -10,10 +10,10 @@ Paths are repository-relative. Tests are written before the implementation they 
 
 ## Phase 3.1: Setup
 
-- [ ] **T001** Create package skeleton `jiuwenswarm/workflow_capture/` with `__init__.py` and empty subpackages `ir/`, `extract/`, `convert/`, `store/`, `run/`, `render/`, per `plan.md` structure
-- [ ] **T002** Create test package `tests/unit_tests/workflow_capture/` with `__init__.py` and `fixtures/`
-- [ ] **T003** [P] Add `workflow_capture` config block to `resources/config.yaml` — `enabled` (default true), `store_root`, `max_session_events`
-- [ ] **T004** Write `tests/unit_tests/workflow_capture/test_import_boundary.py` — walks the package AST and **fails if any module imports from `jiuwenswarm.server.runtime.*`**. This enforces the seam from `plan.md`; it must be in place before implementation begins.
+- [ ] **T001** Create package skeleton `jiuwenswarm/workflow_capture/` with `__init__.py` and empty subpackages `ir/`, `extract/`, `convert/`, `store/`, `run/`, `render/`, per `plan.md` structure — **PARTIAL.** `ir/` and `store/` exist with real implementations; `extract/`, `convert/`, `run/`, `render/` not yet created.
+- [x] **T002** Create test package `tests/unit_tests/workflow_capture/` with `__init__.py` and `fixtures/`
+- [x] **T003** [P] Add `workflow_capture` config block to `resources/config.yaml` — `enabled` (default true), `store_root`, `max_session_events`
+- [x] **T004** Write `tests/unit_tests/workflow_capture/test_import_boundary.py` — walks the package AST and **fails if any module imports from `jiuwenswarm.server.runtime.*`**. This enforces the seam from `plan.md`; it must be in place before implementation begins.
 
 ---
 
@@ -22,22 +22,22 @@ Paths are repository-relative. Tests are written before the implementation they 
 Extraction is untestable without realistic recorded input. These block everything in 3.4.
 
 - [ ] **T005** Capture a real multi-step session and store its event stream as `fixtures/session_linear.jsonl` — search → fetch → summarise → post, no loops, no dead steps
-- [ ] **T006** [P] `fixtures/session_fanout.jsonl` — one search followed by N fetches over its results
-- [ ] **T007** [P] `fixtures/session_dead_steps.jsonl` — contains searches returning nothing and files read but unused
-- [ ] **T008** [P] `fixtures/session_react.jsonl` — a genuinely open-ended sub-task with variable iteration count
-- [ ] **T009** [P] `fixtures/session_ambiguous.jsonl` — a value appearing in both the user request and a tool result
-- [ ] **T009a** [P] `fixtures/session_team.jsonl` — **scope gate, must run before any team dispatch work.** Assert the parent session's `read_session_history_records()` / `read_team_history_records()` actually contains leader and teammate `chat.tool_call` / `chat.tool_result`, and whether they arrive with `truncated: True`. If they are absent, team mode leaves Phase 1 (`PLAN.md` risk 12)
-- [ ] **T010** [P] `fixtures/session_no_tools.jsonl` and `fixtures/session_multi_task.jsonl` — the refusal and segmentation edge cases from `spec.md`
+- [x] **T006** [P] `fixtures/session_fanout.jsonl` — one search followed by N fetches over its results
+- [x] **T007** [P] `fixtures/session_dead_steps.jsonl` — contains searches returning nothing and files read but unused
+- [x] **T008** [P] `fixtures/session_react.jsonl` — a genuinely open-ended sub-task with variable iteration count
+- [x] **T009** [P] `fixtures/session_ambiguous.jsonl` — a value appearing in both the user request and a tool result
+- [x] **T009a** ~~`fixtures/session_team.jsonl` — scope gate for team dispatch~~ — **CUT.** Team mode is out of scope for this MVP phase by explicit decision (2026-08-27), not by the empirical gate `PLAN.md` risk 12 originally proposed. The gate question (whether `read_team_history_records()` actually carries leader/teammate `chat.tool_call`/`chat.tool_result`, and whether it arrives `truncated: True`) is left unanswered and re-opens whenever team-mode capture is picked back up.
+- [ ] **T010** [P] `fixtures/session_no_tools.jsonl` and `fixtures/session_multi_task.jsonl` — the refusal and segmentation edge cases from `spec.md` — **PARTIAL.** `session_no_tools.jsonl` done; `session_multi_task.jsonl` not yet captured — no real session on disk contains two distinct completed tasks, needs a new live session.
 
 ---
 
 ## Phase 3.3: IR foundation
 
-- [ ] **T011** Write `tests/.../test_ir_models.py` — construction, serialisation round-trip, field validation per `data-model.md`
-- [ ] **T012** Implement `ir/models.py` — `SavedWorkflow`, `Component`, `Binding`, `Parameter`, `Connection`, `CaptureReport`, `RunRecord`, `ComponentType`
-- [ ] **T013** Write `tests/.../test_ir_validate.py` — dangling `${node.field}` refs, forward references, missing start/end, cycles outside loop bodies, loop body integrity
-- [ ] **T014** Implement `ir/validate.py` — all rules under "Validation" in `data-model.md`
-- [ ] **T015** [P] Implement `ir/models.py` validators for the conditional rules: frozen requires resolved bindings + fingerprint; agent requires allowlist + iteration budget; loop requires `loop_body` + `arr_loop_var`
+- [x] **T011** Write `tests/.../test_ir_models.py` — construction, serialisation round-trip, field validation per `data-model.md`
+- [x] **T012** Implement `ir/models.py` — `SavedWorkflow`, `Component`, `Binding`, `Parameter`, `Connection`, `CaptureReport`, `RunRecord`, `ComponentType`
+- [x] **T013** Write `tests/.../test_ir_validate.py` — dangling `${node.field}` refs, forward references, missing start/end, cycles outside loop bodies, loop body integrity
+- [x] **T014** Implement `ir/validate.py` — all rules under "Validation" in `data-model.md`
+- [x] **T015** [P] Implement `ir/models.py` validators for the conditional rules: frozen requires resolved bindings + fingerprint; agent requires allowlist + iteration budget; loop requires `loop_body` + `arr_loop_var`
 
 ---
 
@@ -72,7 +72,7 @@ The substance of the feature. Each stage is a pure function over the previous st
 - [ ] **T035** Write `tests/.../test_bindings.py` — `[{name, value}]` → `inputs_schema` flattening; `${...}` passthrough verified against agent-core's `is_ref_path`
 - [ ] **T036** Implement `convert/bindings.py`
 - [ ] **T037** Write `tests/.../test_ir_to_workflow.py` — linear graph, loop graph, branch graph; each asserts the constraints in `research.md` R4
-- [ ] **T037a** Write characterization tests against **local agent-core** pinning its actual registration constraints — loop body edge placement, branch default ordering, deferred branch registration. These replace `PLAN.md` assumptions 3–5, which cannot be verified in this checkout (agent-studio is not present). T038 depends on what these prove, not on `ir_converter.py`
+- [x] **T037a** Write characterization tests against **local agent-core** pinning its actual registration constraints — loop body edge placement, branch default ordering, deferred branch registration. These replace `PLAN.md` assumptions 3–5, which cannot be verified in this checkout (agent-studio is not present). T038 depends on what these prove, not on `ir_converter.py` — **DONE, landed early.** Implemented and passing (`test_agent_core_characterization.py`) ahead of T035–T037; the `convert/` package itself has not been created yet.
 - [ ] **T038** Implement `convert/ir_to_workflow.py` — frozen/transform/agent/loop/branch/start/end, honouring **whatever T037a demonstrates**
 - [ ] **T039** Apply **only** those agent-core patches justified by a failing characterization test against our own node vocabulary. Each applied patch cites the test that fails without it; unneeded patches are dropped rather than inherited (`PLAN.md` assumption 5)
 
@@ -80,13 +80,13 @@ The substance of the feature. Each stage is a pure function over the previous st
 
 ## Phase 3.6: Storage
 
-- [ ] **T040** [P] Write `tests/.../test_store.py` — save, load, list, version on overwrite, prior versions retained, `current` pointer, immutable version dirs
-- [ ] **T041** Implement `store/filesystem.py` per the store layout in `data-model.md` as corrected in review Round 5 — `versions/<n>/` immutable, slug validation and root containment, version allocation and `runs.jsonl`/`state.json` writes guarded by `flock` on `.lock`, build in a same-directory `.tmp-<uuid>/` with `fsync` of files and directory, `os.replace` into place, fail if the target version exists, then atomic `current` swap
-- [ ] **T041a** [P] Implement `state.json` as a derived cache and its **rebuild from `runs.jsonl`** — `runs.jsonl` is authoritative; a missing or disagreeing `state.json` is regenerated, never trusted over the log. Rebuild is **version-scoped**: derive state for the version `current` points at, considering only records whose `workflow_version` matches
-- [ ] **T041b** [P] Test crash recovery — orphaned `.tmp-*` directories, a complete version newer than `current`, and a lost `state.json` each recover without manual intervention
-- [ ] **T042** [P] Implement `RunRecord` append to `runs.jsonl` and the promotion rule — live + success + a `promotion_basis` of `result_consistent == True`, `manual_ack`, or `evaluator` → `verified`. Note `workflow.json` carries **no** `status` field (review Round 4)
-- [ ] **T042a** [P] Test that promotion state survives a `state.json` delete and is reconstructed identically from `runs.jsonl` alone
-- [ ] **T042b** [P] Test version-scoped rebuild — promote v1, overwrite to create v2, delete `state.json`, assert the rebuild reports v2 `provisional` and does **not** inherit v1's promotion (review Round 6)
+- [x] **T040** [P] Write `tests/.../test_store.py` — save, load, list, version on overwrite, prior versions retained, `current` pointer, immutable version dirs
+- [x] **T041** Implement `store/filesystem.py` per the store layout in `data-model.md` as corrected in review Round 5 — `versions/<n>/` immutable, slug validation and root containment, version allocation and `runs.jsonl`/`state.json` writes guarded by `flock` on `.lock`, build in a same-directory `.tmp-<uuid>/` with `fsync` of files and directory, `os.replace` into place, fail if the target version exists, then atomic `current` swap
+- [x] **T041a** [P] Implement `state.json` as a derived cache and its **rebuild from `runs.jsonl`** — `runs.jsonl` is authoritative; a missing or disagreeing `state.json` is regenerated, never trusted over the log. Rebuild is **version-scoped**: derive state for the version `current` points at, considering only records whose `workflow_version` matches
+- [x] **T041b** [P] Test crash recovery — orphaned `.tmp-*` directories, a complete version newer than `current`, and a lost `state.json` each recover without manual intervention
+- [x] **T042** [P] Implement `RunRecord` append to `runs.jsonl` and the promotion rule — live + success + a `promotion_basis` of `result_consistent == True`, `manual_ack`, or `evaluator` → `verified`. Note `workflow.json` carries **no** `status` field (review Round 4)
+- [x] **T042a** [P] Test that promotion state survives a `state.json` delete and is reconstructed identically from `runs.jsonl` alone
+- [x] **T042b** [P] Test version-scoped rebuild — promote v1, overwrite to create v2, delete `state.json`, assert the rebuild reports v2 `provisional` and does **not** inherit v1's promotion (review Round 6)
 
 ---
 
@@ -111,7 +111,7 @@ The substance of the feature. Each stage is a pure function over the previous st
 - [ ] **T053** Implement `commands.py` — runtime-agnostic handlers returning structured results
 - [ ] **T054** Implement adapter `server/runtime/agent_adapter/workflow_slash.py` following `evolution_slash.py`'s shape — `_COMMANDS` tuple, prefix matcher, context object carrying session id and event access, `None` fallthrough
 - [ ] **T055** Wire dispatch in `interface_deep.py` (regular agent mode, `:10461` precedent) alongside the existing evolution slash dispatch. **Depends on T054 only.**
-- [ ] **T055a** Wire dispatch in `team_helpers.py` (team mode, `:1525` precedent). **Blocked on T009a** — do not schedule until the team-capture scope gate passes; if it fails, this task is cut and Phase 1 ships agent-mode only (`PLAN.md` risk 12). T054, T055 and T055a are the only changes outside the package.
+- [x] **T055a** ~~Wire dispatch in `team_helpers.py` (team mode, `:1525` precedent)~~ — **CUT for this MVP phase (2026-08-27).** Phase 1 ships agent-mode only; `T054`/`T055` are the only changes outside the package. Re-add this task (and `T009a`) when team-mode capture is scheduled.
 
 ---
 
@@ -144,9 +144,8 @@ T041       ──▶  T042, T042a, T048
 T044,T046  ──▶  T048
 T048       ──▶  T049, T053
 T053       ──▶  T054  ──▶  T055
-T054       ──▶  T055a                (team dispatch needs the registered adapter surface)
-T009a      ──▶  T055a                (team dispatch is also gated on the team-capture scope gate)
 T037a      ──▶  T038, T039           (characterization tests precede conversion and patching)
+(T009a, T055a — team dispatch — CUT for this MVP phase; see task notes)
 T049       ──▶  T049a
 T056-T059  ──▶  T060
 ```
