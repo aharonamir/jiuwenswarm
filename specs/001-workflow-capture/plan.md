@@ -58,7 +58,7 @@ Beyond the missing surface, three properties make in-tree correct on merit:
 Extractability comes from module boundaries, not packaging:
 
 - `jiuwenswarm/workflow_capture/` MUST NOT import from `jiuwenswarm.server.runtime.*`. It receives an event list and a tool resolver; it does not go looking for them.
-- **Three files outside the package change** (corrected in review Round 1): a new adapter `server/runtime/agent_adapter/workflow_slash.py`, and a dispatch line in **both** `interface_deep.py` (regular agent mode, `:10461`) and `team_helpers.py` (team mode, `:1525`). `evolution_slash.py` is dispatched from both, and the original "one dispatch line" claim would have left `/workflow` dead in regular agent mode. The `team_helpers.py` line is contingent on the team-capture scope gate (`PLAN.md` risk 12, `tasks.md` T009a).
+- **Two files outside the package change for this MVP phase**: a new adapter `server/runtime/agent_adapter/workflow_slash.py`, and a dispatch line in `interface_deep.py` (regular agent mode, `:10461`). `evolution_slash.py` is dispatched from there. Team mode (`team_helpers.py`, `:1525` precedent) is out of scope for this phase by explicit decision (2026-08-27), not by the `PLAN.md` risk 12 scope gate originally proposed — `tasks.md` T009a and T055a are cut. When team-mode capture is scheduled, that dispatch line and its scope gate reopen.
 - All session-runtime knowledge lives in the adapter. If a real plugin API appears, the adapter is what gets rewritten; the package is untouched.
 
 **Enforced by**: an import-boundary test (T004) that fails the build if the package reaches into the runtime.
