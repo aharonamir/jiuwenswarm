@@ -137,24 +137,6 @@ def _data_dir() -> Path:
     return Path.home() / ".jiuwenswarm"
 
 
-def _result(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    check_id: str,
-    category: str,
-    display_name: str,
-    status: str,
-    message: str = "",
-    hint: str = "",
-) -> CheckResult:
-    return CheckResult(
-        id=check_id,
-        category=category,
-        display_name=display_name,
-        status=status,
-        message=message,
-        hint=hint,
-    )
-
-
 # --------------------------------------------------------------------------- #
 # Environment / native checks
 # --------------------------------------------------------------------------- #
@@ -164,7 +146,7 @@ def _check_python_version(_ctx: DoctorContext) -> list[CheckResult]:
     current = (sys.version_info.major, sys.version_info.minor)
     if current < _PYTHON_FLOOR:
         return [
-            _result(
+            CheckResult(
                 "python_version",
                 "environment",
                 "Python version",
@@ -175,7 +157,7 @@ def _check_python_version(_ctx: DoctorContext) -> list[CheckResult]:
         ]
     if current >= _PYTHON_CEILING:
         return [
-            _result(
+            CheckResult(
                 "python_version",
                 "environment",
                 "Python version",
@@ -185,7 +167,7 @@ def _check_python_version(_ctx: DoctorContext) -> list[CheckResult]:
             )
         ]
     return [
-        _result(
+        CheckResult(
             "python_version",
             "environment",
             "Python version",
@@ -214,7 +196,7 @@ def _check_install_mode(_ctx: DoctorContext) -> list[CheckResult]:
         except importlib.metadata.PackageNotFoundError:
             mode = "source"
     return [
-        _result(
+        CheckResult(
             "install_mode",
             "environment",
             "Install mode",
@@ -228,7 +210,7 @@ def _check_core(ctx: DoctorContext) -> list[CheckResult]:
     if ctx.native_result is None:
         message = ctx.native_error or "startup diagnostics could not run"
         return [
-            _result("core", "environment", "Core diagnostics", STATUS_FAIL, message)
+            CheckResult("core", "environment", "Core diagnostics", STATUS_FAIL, message)
         ]
     results: list[CheckResult] = []
     for check in ctx.native_result.get("checks", []):
@@ -240,7 +222,7 @@ def _check_core(ctx: DoctorContext) -> list[CheckResult]:
         if status == STATUS_FAIL and kind == "native_import":
             hint = _t("hint.reinstall", ctx.lang)
         results.append(
-            _result(
+            CheckResult(
                 check.get("name") or "check",
                 category,
                 name,
@@ -260,11 +242,13 @@ def _check_config_yaml(ctx: DoctorContext) -> list[CheckResult]:
     path = _config_yaml_path()
     if ctx.config is not None:
         return [
-            _result("config_yaml", "environment", "config.yaml", STATUS_OK, str(path))
+            CheckResult(
+                "config_yaml", "environment", "config.yaml", STATUS_OK, str(path)
+            )
         ]
     if ctx.config_error:
         return [
-            _result(
+            CheckResult(
                 "config_yaml",
                 "environment",
                 "config.yaml",
@@ -274,7 +258,7 @@ def _check_config_yaml(ctx: DoctorContext) -> list[CheckResult]:
             )
         ]
     return [
-        _result(
+        CheckResult(
             "config_yaml",
             "environment",
             "config.yaml",
@@ -288,9 +272,9 @@ def _check_config_yaml(ctx: DoctorContext) -> list[CheckResult]:
 def _check_env_file(ctx: DoctorContext) -> list[CheckResult]:
     path = _data_dir() / "config" / ".env"
     if path.exists():
-        return [_result("env_file", "environment", ".env", STATUS_OK, str(path))]
+        return [CheckResult("env_file", "environment", ".env", STATUS_OK, str(path))]
     return [
-        _result(
+        CheckResult(
             "env_file",
             "environment",
             ".env",
@@ -312,11 +296,11 @@ def _check_external_tools(_ctx: DoctorContext) -> list[CheckResult]:
         found = shutil.which(command)
         if found:
             results.append(
-                _result(f"tool:{tool_id}", "tools", command, STATUS_OK, found)
+                CheckResult(f"tool:{tool_id}", "tools", command, STATUS_OK, found)
             )
         else:
             results.append(
-                _result(
+                CheckResult(
                     f"tool:{tool_id}",
                     "tools",
                     command,
@@ -375,7 +359,7 @@ def _probe_http(url: str, *, api_key: str | None, timeout: float) -> tuple[str, 
 def _check_model_apis(ctx: DoctorContext) -> list[CheckResult]:
     if ctx.config_error is not None:
         return [
-            _result(
+            CheckResult(
                 "model_config",
                 "models",
                 "Model configuration",
@@ -386,7 +370,7 @@ def _check_model_apis(ctx: DoctorContext) -> list[CheckResult]:
         ]
     if ctx.config is None:
         return [
-            _result(
+            CheckResult(
                 "model_config",
                 "models",
                 "Model configuration",
@@ -398,7 +382,7 @@ def _check_model_apis(ctx: DoctorContext) -> list[CheckResult]:
     entries = _model_entries(ctx.config)
     if not entries:
         return [
-            _result(
+            CheckResult(
                 "model_entries",
                 "models",
                 "Configured models",
@@ -430,7 +414,7 @@ def _check_model_apis(ctx: DoctorContext) -> list[CheckResult]:
     def _probe_entry(item: tuple[int, str, str, str, str | None]) -> CheckResult:
         index, label, api_base, api_key, probe_key = item
         if not api_base:
-            return _result(
+            return CheckResult(
                 f"model:{index}",
                 "models",
                 label,
@@ -440,7 +424,7 @@ def _check_model_apis(ctx: DoctorContext) -> list[CheckResult]:
         key_msg = "key set" if api_key else "key not set"
         status, message = _probe_http(api_base, api_key=probe_key, timeout=ctx.timeout)
         hint = "Check network/proxy or the api_base" if status == STATUS_FAIL else ""
-        return _result(
+        return CheckResult(
             f"model:{index}",
             "models",
             label,
@@ -475,7 +459,7 @@ def _check_services(_ctx: DoctorContext) -> list[CheckResult]:
             port = default_port
         if _port_open(port):
             results.append(
-                _result(
+                CheckResult(
                     f"service:{name}",
                     "services",
                     name,
@@ -485,7 +469,7 @@ def _check_services(_ctx: DoctorContext) -> list[CheckResult]:
             )
         else:
             results.append(
-                _result(
+                CheckResult(
                     f"service:{name}",
                     "services",
                     name,
@@ -508,7 +492,7 @@ def _check_mcp(ctx: DoctorContext) -> list[CheckResult]:
         entries = extract_enabled_mcp_server_entries()
     except Exception as exc:  # noqa: BLE001
         return [
-            _result(
+            CheckResult(
                 "mcp_config",
                 "mcp",
                 "MCP configuration",
@@ -517,7 +501,9 @@ def _check_mcp(ctx: DoctorContext) -> list[CheckResult]:
             )
         ]
     if not entries:
-        return [_result("mcp_servers", "mcp", "Enabled MCP servers", STATUS_OK, "none")]
+        return [
+            CheckResult("mcp_servers", "mcp", "Enabled MCP servers", STATUS_OK, "none")
+        ]
     results: list[CheckResult] = []
     for entry in entries:
         name = str(entry.get("name") or "unnamed")
@@ -526,13 +512,13 @@ def _check_mcp(ctx: DoctorContext) -> list[CheckResult]:
             command = str(entry.get("command") or "").strip()
             if not command:
                 results.append(
-                    _result(f"mcp:{name}", "mcp", name, STATUS_WARN, "no command")
+                    CheckResult(f"mcp:{name}", "mcp", name, STATUS_WARN, "no command")
                 )
                 continue
             executable = command.split(" ", maxsplit=1)[0]
             if shutil.which(executable):
                 results.append(
-                    _result(
+                    CheckResult(
                         f"mcp:{name}",
                         "mcp",
                         name,
@@ -542,7 +528,7 @@ def _check_mcp(ctx: DoctorContext) -> list[CheckResult]:
                 )
             else:
                 results.append(
-                    _result(
+                    CheckResult(
                         f"mcp:{name}",
                         "mcp",
                         name,
@@ -554,13 +540,13 @@ def _check_mcp(ctx: DoctorContext) -> list[CheckResult]:
             url = str(entry.get("url") or "").strip()
             if not url:
                 results.append(
-                    _result(f"mcp:{name}", "mcp", name, STATUS_WARN, "no URL")
+                    CheckResult(f"mcp:{name}", "mcp", name, STATUS_WARN, "no URL")
                 )
                 continue
             parsed = urlparse(url)
             if parsed.scheme not in ("http", "https") or not parsed.hostname:
                 results.append(
-                    _result(
+                    CheckResult(
                         f"mcp:{name}", "mcp", name, STATUS_FAIL, f"invalid URL: {url}"
                     )
                 )
@@ -569,7 +555,7 @@ def _check_mcp(ctx: DoctorContext) -> list[CheckResult]:
             if parsed.port:
                 origin += f":{parsed.port}"
             status, message = _probe_http(origin, api_key=None, timeout=ctx.timeout)
-            results.append(_result(f"mcp:{name}", "mcp", name, status, message))
+            results.append(CheckResult(f"mcp:{name}", "mcp", name, status, message))
     return results
 
 
@@ -598,7 +584,7 @@ def run_checks(ctx: DoctorContext) -> list[CheckResult]:
             results.extend(factory(ctx))
         except Exception as exc:  # noqa: BLE001
             results.append(
-                _result(
+                CheckResult(
                     factory.__name__,
                     "internal",
                     factory.__name__,

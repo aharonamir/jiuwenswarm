@@ -356,11 +356,11 @@ def test_mcp_http_probe(monkeypatch) -> None:
 
 def _ok() -> list:
     return [
-        doctor_cli._result("a", "environment", "Python version", "ok", "3.11.9"),
-        doctor_cli._result(
+        doctor_cli.CheckResult("a", "environment", "Python version", "ok", "3.11.9"),
+        doctor_cli.CheckResult(
             "b", "environment", ".env", "warn", "not found", "create it"
         ),
-        doctor_cli._result("c", "models", "gpt", "fail", "timeout", "check proxy"),
+        doctor_cli.CheckResult("c", "models", "gpt", "fail", "timeout", "check proxy"),
     ]
 
 
@@ -406,24 +406,30 @@ def _patch_main(monkeypatch, results) -> None:
 
 
 def test_main_ok_exit_zero(monkeypatch, capsys) -> None:
-    _patch_main(monkeypatch, [doctor_cli._result("a", "environment", "Python", "ok")])
+    _patch_main(
+        monkeypatch, [doctor_cli.CheckResult("a", "environment", "Python", "ok")]
+    )
     assert main(["--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["type"] == "doctor_cli_result"
 
 
 def test_main_fail_exit_ten(monkeypatch, capsys) -> None:
-    _patch_main(monkeypatch, [doctor_cli._result("a", "models", "gpt", "fail")])
+    _patch_main(monkeypatch, [doctor_cli.CheckResult("a", "models", "gpt", "fail")])
     assert main([]) == 10
 
 
 def test_main_warn_not_strict_exit_zero(monkeypatch, capsys) -> None:
-    _patch_main(monkeypatch, [doctor_cli._result("a", "environment", ".env", "warn")])
+    _patch_main(
+        monkeypatch, [doctor_cli.CheckResult("a", "environment", ".env", "warn")]
+    )
     assert main([]) == 0
 
 
 def test_main_strict_warn_exit_ten(monkeypatch, capsys) -> None:
-    _patch_main(monkeypatch, [doctor_cli._result("a", "environment", ".env", "warn")])
+    _patch_main(
+        monkeypatch, [doctor_cli.CheckResult("a", "environment", ".env", "warn")]
+    )
     assert main(["--strict"]) == 10
 
 
@@ -437,7 +443,9 @@ def test_main_internal_error_exit_eleven(monkeypatch, capsys) -> None:
 
 
 def test_main_output_writes_json(monkeypatch, tmp_path: Path) -> None:
-    _patch_main(monkeypatch, [doctor_cli._result("a", "environment", "Python", "ok")])
+    _patch_main(
+        monkeypatch, [doctor_cli.CheckResult("a", "environment", "Python", "ok")]
+    )
     out = tmp_path / "doctor.json"
     assert main(["--json", "--output", str(out)]) == 0
     payload = json.loads(out.read_text(encoding="utf-8"))
